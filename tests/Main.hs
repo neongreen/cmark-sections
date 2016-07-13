@@ -26,28 +26,6 @@ import CMark.Sections
 
 main :: IO ()
 main = hspec $ do
-  describe "cutting:" $ do
-    it "adding newline to block" $ do
-      let p1 = PosInfo 1 1 2 0
-          p2 = PosInfo 2 1 3 0
-      cut p1 p2 "# header A\n# header B\n" `shouldBe` "# header A\n"
-    -- ###-headers are parsed weirdly – the position info doesn't include the
-    -- “###” part and doesn't go to the second line (despite the header being
-    -- a block element). 'fixPosition' should fix this.
-    it "###-header position" $ do
-      let src = "# header\n\n"
-          pos = PosInfo 1 1 2 0
-          res = [Node (Just pos) (HEADING 1) [
-            Node Nothing (TEXT "header") []]]
-      parse [] src `shouldBeMD` Ann src res
-    -- ===-headers are parsed normally
-    it "===-header position" $ do
-      let src = "header\n======\n\n"
-          pos = PosInfo 1 1 3 0
-          res = [Node (Just pos) (HEADING 1) [
-            Node Nothing (TEXT "header") []]]
-      parse [] src `shouldBeMD` Ann src res
-
   describe "converting:" $ do
     it "empty document" $ do
       let src = ""

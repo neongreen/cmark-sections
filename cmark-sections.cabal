@@ -29,7 +29,6 @@ library
                      , cmark >= 0.5 && < 0.5.3
                      , containers
                      , microlens == 0.4.*
-                     , microlens-th >= 0.3 && < 0.5
                      , split == 0.2.*
                      , text
   ghc-options:         -Wall -fno-warn-unused-do-bind

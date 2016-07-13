@@ -67,16 +67,12 @@ You can preprocess parsed Markdown after doing 'parse' as long as you don't add 
 -}
 module CMark.Sections
 (
-  -- * Basic API
   parse,
   toDocument,
+  fromDocument,
   Annotated(..),
   Section(..),
   Document(..),
-
-  -- * Internal functions
-  cut,
-  fromDocument,
 )
 where
 
@@ -84,7 +80,6 @@ where
 import BasePrelude
 -- Lenses
 import Lens.Micro hiding ((&))
-import Lens.Micro.TH
 -- Text
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -95,12 +90,6 @@ import qualified Data.Tree as Tree
 -- Lists
 import Data.List.Split
 
-
-flip makeLensesFor ''PosInfo [
-  ("startColumn", "_x1"),
-  ("endColumn"  , "_x2"),
-  ("startLine"  , "_y1"),
-  ("endLine"    , "_y2") ]
 
 {- |
 A data type for annotating things with their source. In this library we only use @Annotated [Node]@, which stands for “some Markdown nodes + source”.
@@ -134,10 +123,10 @@ data Document = Document {
   deriving (Eq, Show)
 
 {- |
-'parse' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node. It also fixes source annotations of some nodes (see 'fixPosition'), which is needed for the library to work properly.
+'parse' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
 -}
 parse :: [CMarkOption] -> Text -> Annotated [Node]
-parse opts s = Ann s (map fixPosition ns)
+parse opts s = Ann s ns
   where
     Node _ DOCUMENT ns = commonmarkToNode opts s
 
@@ -172,51 +161,31 @@ breakAtHeadings nodes =
     isHeading (Node _ (HEADING _) _) = True
     isHeading _ = False
 
+-- | Get start line of a node.
+start :: Node -> Int
+start (Node (Just p) _ _) = startLine p
+start (Node Nothing  _ _) =
+  error "CMark.Sections.start: node doesn't have a position"
+
+-- We assume here that two top-level blocks can't possibly be on the same line.
 cut
-  :: PosInfo      -- ^ Position of the first node which should be included
-  -> PosInfo      -- ^ Position of the node at which to stop
+  :: Node      -- ^ First node to include
+  -> Node      -- ^ First node to exclude
   -> Text
   -> Text
-cut pa pb s =
-  case take (endY-startY+1) . drop (startY-1) $ ls of
-    []  -> ""
-    -- We only ever cut blocks so the block will always have a newline, and
-    -- that's why we use 'unlines' here instead of just 'take' +
-    -- 'drop'. Otherwise, let's say, you're cutting something like this:
-    --
-    --    # header A
-    --    # header B
-    --
-    -- Header B starts at (2, 0), and hence (endX, endY) will be (maxBound,
-    -- 1) and we'll end up cutting header A from (1, 1) to (maxBound, 1),
-    -- which is only one line. We're cutting a single line. If we didn't use
-    -- 'unlines', we'd return "# header A", which would be wrong.
-    [x] -> T.unlines [T.take (endX-startX+1) . T.drop (startX-1) $ x]
-    xs  -> T.unlines $ xs & over _head (T.drop (startX-1))
-                          & over _last (T.take endX)
-  where
-    ls = T.lines s
-    (startX, startY) = (pa^._x1, pa^._y1)
-    (endX, endY) | pb^._x1 > 1 = (pb^._x1 - 1, pb^._y1)
-                 | otherwise   = (maxBound, pb^._y1 - 1)
+cut a b = T.unlines . take (start b - start a) . drop (start a - 1) . T.lines
 
-cutFromStart
-  :: PosInfo
+cutTo
+  :: Node
   -> Text
   -> Text
-cutFromStart pb s = cut (PosInfo 1 1 1 1) pb s
+cutTo b = T.unlines . take (start b - 1) . T.lines
 
-cutUntilEnd
-  :: PosInfo
+cutFrom
+  :: Node
   -> Text
   -> Text
-cutUntilEnd pa s =
-  case drop (startY-1) ls of
-    []  -> ""
-    xs  -> T.unlines (xs & _head %~ T.drop (startX-1))
-  where
-    ls = T.lines s
-    (startX, startY) = (pa^._x1, pa^._y1)
+cutFrom a = T.unlines . drop (start a - 1) . T.lines
 
 {- |
 Turn a list of Markdown nodes into a tree.
@@ -232,22 +201,22 @@ toDocument (Ann src nodes) = do
   let prefaceAnnotated :: Annotated [Node]
       prefaceAnnotated = case restNodes of
         []    -> Ann src prefaceNodes
-        (x:_) -> Ann (cutFromStart (x^._1._pos) src) prefaceNodes
+        (x:_) -> Ann (cutTo (fst x) src) prefaceNodes
   -- Annotate other blocks with their sources by cutting until the position
   -- of the next block
   let blocks :: [((Int, Annotated [Node]), Annotated [Node])]
       blocks = do
         ((heading, afterBlocks), mbNext) <-
             zip restNodes (tail (map Just restNodes ++ [Nothing]))
-        let Node (Just hPos) (HEADING hLevel) hNodes = heading
+        let Node _ (HEADING hLevel) hNodes = heading
         let hSrc = case (afterBlocks, mbNext) of
-              (x:_, _)          -> cut hPos (x^._pos) src
-              ([], Just (x, _)) -> cut hPos (x^._pos) src
-              ([], Nothing)     -> cutUntilEnd hPos src
+              (x:_, _)          -> cut heading x src
+              ([], Just (x, _)) -> cut heading x src
+              ([], Nothing)     -> cutFrom heading src
         let afterBlocksSrc = case (afterBlocks, mbNext) of
               ([], _)            -> ""
-              (x:_, Just (y, _)) -> cut (x^._pos) (y^._pos) src
-              (x:_, Nothing)     -> cutUntilEnd (x^._pos) src
+              (x:_, Just (y, _)) -> cut x y src
+              (x:_, Nothing)     -> cutFrom x src
         return ((hLevel, Ann hSrc hNodes),
                 Ann afterBlocksSrc afterBlocks)
   -- A function for turning blocks into a tree
@@ -271,19 +240,3 @@ fromDocument Document{..} = Ann src nodes
     nodes = value preface ++
             concat [mkHeadingNode s : value (content s) |
                     s <- flattenForest sections]
-
-{- |
-cmark sets some source positions incorrectly and we have to fix them. For instance, with ###-headers it doesn't consider “#” a part of the header (see https://github.com/jgm/cmark/issues/141).
-
-Since we only apply 'fixPosition' to top-level blocks, we simply /always/ set the initial position to the beginning of the line.
--}
-fixPosition :: Node -> Node
-fixPosition n = n & _pos %~ fixBeginning
-  where
-    fixBeginning pos =
-      pos & _x1 .~ 1
-
-_pos :: Lens' Node PosInfo
-_pos f (Node (Just p) x y) = (\p' -> Node (Just p') x y) <$> f p
-_pos _ (Node Nothing  x y) =
-  error "CMark.Sections._pos: node doesn't have a position"
