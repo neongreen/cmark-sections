@@ -2,6 +2,7 @@
 TemplateHaskell,
 RecordWildCards,
 DeriveFunctor,
+DeriveFoldable,
 DeriveTraversable,
 OverloadedStrings,
 NoImplicitPrelude
