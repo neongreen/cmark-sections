@@ -68,12 +68,18 @@ You can preprocess parsed Markdown after doing 'parse' as long as you don't add 
 -}
 module CMark.Sections
 (
+  -- * Parse Markdown to trees
   parse,
   toDocument,
-  fromDocument,
   Annotated(..),
   Section(..),
   Document(..),
+
+  -- * Work with parsed trees
+  -- $monoid-note
+  flattenDocument,
+  flattenSection,
+  flattenForest,
 )
 where
 
@@ -100,6 +106,10 @@ data Annotated a = Ann {
   value  :: a }
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
+instance Monoid a => Monoid (Annotated a) where
+  mempty = Ann "" mempty
+  Ann s1 v1 `mappend` Ann s2 v2 = Ann (s1 <> s2) (v1 <> v2)
+
 {- |
 A section in the Markdown tree. Does not contain subsections (the tree is built using 'Tree.Forest' from "Data.Tree").
 -}
@@ -110,9 +120,6 @@ data Section = Section {
   -- | Text between the heading and the first subsection. Can be empty.
   content :: Annotated [Node] }
   deriving (Eq, Show)
-
-mkHeadingNode :: Section -> Node
-mkHeadingNode s = Node Nothing (HEADING (level s)) (value (heading s))
 
 {- |
 The whole parsed Markdown tree.
@@ -231,13 +238,20 @@ toDocument (Ann src nodes) = do
     preface = prefaceAnnotated,
     sections = makeTree blocks }
 
-fromDocument :: Document -> Annotated [Node]
-fromDocument Document{..} = Ann src nodes
+{- $monoid-note
+
+Note that you can use ('<>') to combine 'Annotated' nodes together.
+-}
+
+flattenDocument :: Document -> Annotated [Node]
+flattenDocument Document{..} = preface <> flattenForest sections
+
+flattenSection :: Section -> Annotated [Node]
+flattenSection Section{..} =
+  Ann (source heading <> source content)
+      (headingNode : value content)
   where
-    flattenForest = concatMap Tree.flatten
-    src = source preface <>
-          mconcat [source (heading s) <> source (content s) |
-                   s <- flattenForest sections]
-    nodes = value preface ++
-            concat [mkHeadingNode s : value (content s) |
-                    s <- flattenForest sections]
+    headingNode = Node Nothing (HEADING level) (value heading)
+
+flattenForest :: Tree.Forest Section -> Annotated [Node]
+flattenForest = mconcat . map flattenSection . concatMap Tree.flatten

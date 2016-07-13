@@ -29,7 +29,7 @@ main = hspec $ do
   describe "converting:" $ do
     it "empty document" $ do
       let src = ""
-          preface = emptyMD
+          preface = mempty
           sections = []
       toDocument (parse [] src) `shouldBe` Document{..}
     it "spaces" $ do
@@ -53,29 +53,29 @@ main = hspec $ do
       toDocument (parse [] src) `shouldBe` Document{..}
     it "headers" $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
-          preface = emptyMD
+          preface = mempty
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) emptyMD) [
-              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) emptyMD) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) emptyMD) [] ] ]
+            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
+              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
+              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
-          preface = emptyMD
+          preface = mempty
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) emptyMD) [
+            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
               Tree.Node (Section 2 (Ann "## 2\n" [text "2"])
                 (Ann "test\n" [Node (Just (PosInfo 4 1 4 4)) PARAGRAPH
                                [text "test"]])) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) emptyMD) [] ] ]
+              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
           preface = parse [] "blah\n"
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) emptyMD) [
-              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) emptyMD) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) emptyMD) [] ] ]
+            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
+              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
+              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
 
   describe "reconstruction:" $ do
@@ -95,19 +95,16 @@ main = hspec $ do
       prop "QuickCheck" $
         forAllShrink mdGen shrinkMD $ \(T.concat -> src) ->
           let md1 = parse [] src
-              md2 = fromDocument . toDocument $ md1
+              md2 = flattenDocument . toDocument $ md1
               err = printf "%s: %s /= %s" (show src) (show md1) (show md2)
           in  counterexample err (compareMD md1 md2)
 
 text :: Text -> Node
 text t = Node Nothing (TEXT t) []
 
-emptyMD :: Annotated [Node]
-emptyMD = Ann "" []
-
 fromToDoc :: Text -> Expectation
 fromToDoc src =
-  fromDocument (toDocument (parse [] src)) `shouldBeMD` parse [] src
+  flattenDocument (toDocument (parse [] src)) `shouldBeMD` parse [] src
 
 shouldBeMD :: Annotated [Node] -> Annotated [Node] -> Expectation
 shouldBeMD x y = x `shouldSatisfy` (compareMD y)
