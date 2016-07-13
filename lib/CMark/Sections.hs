@@ -79,6 +79,7 @@ module CMark.Sections
   -- $monoid-note
   flattenDocument,
   flattenSection,
+  flattenTree,
   flattenForest,
 )
 where
@@ -252,6 +253,9 @@ flattenSection Section{..} =
       (headingNode : value content)
   where
     headingNode = Node Nothing (HEADING level) (value heading)
+
+flattenTree :: Tree.Tree Section -> Annotated [Node]
+flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 
 flattenForest :: Tree.Forest Section -> Annotated [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
