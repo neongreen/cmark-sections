@@ -55,27 +55,27 @@ main = hspec $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
           preface = mempty
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
+              Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
+              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
           preface = mempty
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section 2 (Ann "## 2\n" [text "2"])
+            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
+              Tree.Node (Section () 2 (Ann "## 2\n" [text "2"])
                 (Ann "test\n" [Node (Just (PosInfo 4 1 4 4)) PARAGRAPH
                                [text "test"]])) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
           preface = parse [] "blah\n"
           sections = [
-            Tree.Node (Section 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
-              Tree.Node (Section 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
+              Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
+              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
       toDocument (parse [] src) `shouldBe` Document{..}
 
   describe "reconstruction:" $ do
