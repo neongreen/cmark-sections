@@ -114,22 +114,23 @@ instance Monoid a => Monoid (Annotated a) where
 {- |
 A section in the Markdown tree. Does not contain subsections (the tree is built using 'Tree.Forest' from "Data.Tree").
 -}
-data Section = Section {
+data Section a = Section {
+  sectionAnn :: a,
   -- | Level (from 1 to 6).
   level   :: Int,
   heading :: Annotated [Node],
   -- | Text between the heading and the first subsection. Can be empty.
   content :: Annotated [Node] }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 {- |
 The whole parsed Markdown tree.
 -}
-data Document = Document {
+data Document a = Document {
   -- | Text before the first section. Can be empty.
   preface  :: Annotated [Node],
-  sections :: Tree.Forest Section }
-  deriving (Eq, Show)
+  sections :: Tree.Forest (Section a) }
+  deriving (Eq, Show, Functor)
 
 {- |
 'parse' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
@@ -199,7 +200,7 @@ cutFrom a = T.unlines . drop (start a - 1) . T.lines
 {- |
 Turn a list of Markdown nodes into a tree.
 -}
-toDocument :: Annotated [Node] -> Document
+toDocument :: Annotated [Node] -> Document ()
 toDocument (Ann src nodes) = do
   -- Break at headings
   let prefaceNodes :: [Node]
@@ -232,7 +233,7 @@ toDocument (Ann src nodes) = do
   let makeTree [] = []
       makeTree (((level, heading), rest) : xs) =
         let (nested, others) = span (\x -> x^._1._1 > level) xs
-        in  Tree.Node (Section level heading rest) (makeTree nested) :
+        in  Tree.Node (Section () level heading rest) (makeTree nested) :
             makeTree others
   -- Return the result
   Document {
@@ -244,18 +245,18 @@ toDocument (Ann src nodes) = do
 Note that you can use ('<>') to combine 'Annotated' nodes together.
 -}
 
-flattenDocument :: Document -> Annotated [Node]
+flattenDocument :: Document a -> Annotated [Node]
 flattenDocument Document{..} = preface <> flattenForest sections
 
-flattenSection :: Section -> Annotated [Node]
+flattenSection :: Section a -> Annotated [Node]
 flattenSection Section{..} =
   Ann (source heading <> source content)
       (headingNode : value content)
   where
     headingNode = Node Nothing (HEADING level) (value heading)
 
-flattenTree :: Tree.Tree Section -> Annotated [Node]
+flattenTree :: Tree.Tree (Section a) -> Annotated [Node]
 flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 
-flattenForest :: Tree.Forest Section -> Annotated [Node]
+flattenForest :: Tree.Forest (Section a) -> Annotated [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
