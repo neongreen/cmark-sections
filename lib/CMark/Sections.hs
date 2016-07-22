@@ -121,7 +121,7 @@ data Section a = Section {
   heading :: Annotated [Node],
   -- | Text between the heading and the first subsection. Can be empty.
   content :: Annotated [Node] }
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Show, Functor, Foldable, Traversable)
 
 {- |
 The whole parsed Markdown tree.
@@ -130,7 +130,7 @@ data Document a = Document {
   -- | Text before the first section. Can be empty.
   preface  :: Annotated [Node],
   sections :: Tree.Forest (Section a) }
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Show, Functor, Foldable, Traversable)
 
 {- |
 'parse' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
