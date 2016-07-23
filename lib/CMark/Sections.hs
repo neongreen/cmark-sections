@@ -10,8 +10,6 @@ NoImplicitPrelude
 
 
 {- |
-__This module is designed to be imported qualified (for instance, as “MD”).__
-
 This library lets you parse Markdown into a hierarchical structure (delimited by headings). For instance, let's say your document looks like this:
 
 @
@@ -61,16 +59,16 @@ That's what this library does. Moreover, it lets you access the Markdown source 
 In most cases the only thing you need to do is something like this:
 
 @
-'toDocument' . 'parse' ['optSafe', 'optNormalize']
+'nodesToDocument' . 'commonmarkToAnnotatedNodes' ['optSafe', 'optNormalize']
 @
 
-You can preprocess parsed Markdown after doing 'parse' as long as you don't add or remove any top-level nodes.
+You can preprocess parsed Markdown after doing 'commonmarkToAnnotatedNodes' as long as you don't add or remove any top-level nodes.
 -}
 module CMark.Sections
 (
   -- * Parse Markdown to trees
-  parse,
-  toDocument,
+  commonmarkToAnnotatedNodes,
+  nodesToDocument,
   Annotated(..),
   Section(..),
   Document(..),
@@ -103,8 +101,8 @@ import Data.List.Split
 A data type for annotating things with their source. In this library we only use @Annotated [Node]@, which stands for “some Markdown nodes + source”.
 -}
 data Annotated a = Ann {
-  source :: Text,
-  value  :: a }
+  annSource :: Text,
+  annValue  :: a }
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
 instance Monoid a => Monoid (Annotated a) where
@@ -133,10 +131,10 @@ data Document a = Document {
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
 {- |
-'parse' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
+'commonmarkToAnnotatedNodes' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
 -}
-parse :: [CMarkOption] -> Text -> Annotated [Node]
-parse opts s = Ann s ns
+commonmarkToAnnotatedNodes :: [CMarkOption] -> Text -> Annotated [Node]
+commonmarkToAnnotatedNodes opts s = Ann s ns
   where
     Node _ DOCUMENT ns = commonmarkToNode opts s
 
@@ -200,8 +198,8 @@ cutFrom a = T.unlines . drop (start a - 1) . T.lines
 {- |
 Turn a list of Markdown nodes into a tree.
 -}
-toDocument :: Annotated [Node] -> Document ()
-toDocument (Ann src nodes) = do
+nodesToDocument :: Annotated [Node] -> Document ()
+nodesToDocument (Ann src nodes) = do
   -- Break at headings
   let prefaceNodes :: [Node]
       restNodes :: [(Node, [Node])]
@@ -250,10 +248,10 @@ flattenDocument Document{..} = preface <> flattenForest sections
 
 flattenSection :: Section a -> Annotated [Node]
 flattenSection Section{..} =
-  Ann (source heading <> source content)
-      (headingNode : value content)
+  Ann (annSource heading <> annSource content)
+      (headingNode : annValue content)
   where
-    headingNode = Node Nothing (HEADING level) (value heading)
+    headingNode = Node Nothing (HEADING level) (annValue heading)
 
 flattenTree :: Tree.Tree (Section a) -> Annotated [Node]
 flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f

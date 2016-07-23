@@ -31,18 +31,21 @@ main = hspec $ do
       let src = ""
           preface = mempty
           sections = []
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "spaces" $ do
       let src = "  \n\n  \n"
           preface = Ann "  \n\n  \n" []
           sections = []
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "paragraph" $ do
       let src = "x"
           preface = Ann "x" [
             Node (Just (PosInfo 1 1 1 1)) PARAGRAPH [text "x"] ]
           sections = []
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "3 paragraphs" $ do
       let src = T.unlines ["","x","","","y","","z",""]
           preface = Ann "\nx\n\n\ny\n\nz\n\n" [
@@ -50,7 +53,8 @@ main = hspec $ do
             Node (Just (PosInfo 5 1 5 1)) PARAGRAPH [text "y"],
             Node (Just (PosInfo 7 1 7 1)) PARAGRAPH [text "z"] ]
           sections = []
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "headers" $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
           preface = mempty
@@ -58,7 +62,8 @@ main = hspec $ do
             Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
               Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
               Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
           preface = mempty
@@ -68,15 +73,17 @@ main = hspec $ do
                 (Ann "test\n" [Node (Just (PosInfo 4 1 4 4)) PARAGRAPH
                                [text "test"]])) [],
               Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
-          preface = parse [] "blah\n"
+          preface = commonmarkToAnnotatedNodes [] "blah\n"
           sections = [
             Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
               Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
               Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
-      toDocument (parse [] src) `shouldBe` Document{..}
+      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+        `shouldBe` Document{..}
 
   describe "reconstruction:" $ do
     it "paragraph + ###-header" $
@@ -94,8 +101,8 @@ main = hspec $ do
     modifyMaxSize (*20) $ modifyMaxSuccess (*10) $
       prop "QuickCheck" $
         forAllShrink mdGen shrinkMD $ \(T.concat -> src) ->
-          let md1 = parse [] src
-              md2 = flattenDocument . toDocument $ md1
+          let md1 = commonmarkToAnnotatedNodes [] src
+              md2 = flattenDocument . nodesToDocument $ md1
               err = printf "%s: %s /= %s" (show src) (show md1) (show md2)
           in  counterexample err (compareMD md1 md2)
 
@@ -104,7 +111,8 @@ text t = Node Nothing (TEXT t) []
 
 fromToDoc :: Text -> Expectation
 fromToDoc src =
-  flattenDocument (toDocument (parse [] src)) `shouldBeMD` parse [] src
+  flattenDocument (nodesToDocument (commonmarkToAnnotatedNodes [] src))
+    `shouldBeMD` commonmarkToAnnotatedNodes [] src
 
 shouldBeMD :: Annotated [Node] -> Annotated [Node] -> Expectation
 shouldBeMD x y = x `shouldSatisfy` (compareMD y)
@@ -113,16 +121,16 @@ shouldBeMD x y = x `shouldSatisfy` (compareMD y)
 -- and position info).
 compareMD :: Annotated [Node] -> Annotated [Node] -> Bool
 compareMD x y =
-  map (\(Node _ a b) -> Node Nothing a b) (value x) ==
-  map (\(Node _ a b) -> Node Nothing a b) (value y)
+  map (\(Node _ a b) -> Node Nothing a b) (annValue x) ==
+  map (\(Node _ a b) -> Node Nothing a b) (annValue y)
   &&
-  or [source x == source y,
-      and [not (T.isSuffixOf "\n" (source x)),
-           T.isSuffixOf "\n" (source y),
-           source x == T.init (source y)],
-      and [not (T.isSuffixOf "\n" (source y)),
-           T.isSuffixOf "\n" (source x),
-           source y == T.init (source x)] ]
+  or [annSource x == annSource y,
+      and [not (T.isSuffixOf "\n" (annSource x)),
+           T.isSuffixOf "\n" (annSource y),
+           annSource x == T.init (annSource y)],
+      and [not (T.isSuffixOf "\n" (annSource y)),
+           T.isSuffixOf "\n" (annSource x),
+           annSource y == T.init (annSource x)] ]
 
 -- | Try to shrink Markdown.
 shrinkMD :: [Text] -> [[Text]]
