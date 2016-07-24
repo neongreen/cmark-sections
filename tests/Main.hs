@@ -26,21 +26,26 @@ import CMark.Sections
 
 main :: IO ()
 main = hspec $ do
+  let mkSect level heading content ns =
+        Tree.Node Section{headingAnn = (),contentAnn = (),..} ns
   describe "converting:" $ do
     it "empty document" $ do
       let src = ""
+          prefaceAnn = ()
           preface = mempty
           sections = []
       nodesToDocument (commonmarkToAnnotatedNodes [] src)
         `shouldBe` Document{..}
     it "spaces" $ do
       let src = "  \n\n  \n"
+          prefaceAnn = ()
           preface = Ann "  \n\n  \n" []
           sections = []
       nodesToDocument (commonmarkToAnnotatedNodes [] src)
         `shouldBe` Document{..}
     it "paragraph" $ do
       let src = "x"
+          prefaceAnn = ()
           preface = Ann "x" [
             Node (Just (PosInfo 1 1 1 1)) PARAGRAPH [text "x"] ]
           sections = []
@@ -48,6 +53,7 @@ main = hspec $ do
         `shouldBe` Document{..}
     it "3 paragraphs" $ do
       let src = T.unlines ["","x","","","y","","z",""]
+          prefaceAnn = ()
           preface = Ann "\nx\n\n\ny\n\nz\n\n" [
             Node (Just (PosInfo 2 1 2 1)) PARAGRAPH [text "x"],
             Node (Just (PosInfo 5 1 5 1)) PARAGRAPH [text "y"],
@@ -57,31 +63,34 @@ main = hspec $ do
         `shouldBe` Document{..}
     it "headers" $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
+          prefaceAnn = ()
           preface = mempty
           sections = [
-            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
-              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+            mkSect 1 (Ann "# 1\n\n" [text "1"]) mempty [
+              mkSect 2 (Ann "## 2\n\n" [text "2"]) mempty [],
+              mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
       nodesToDocument (commonmarkToAnnotatedNodes [] src)
         `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
+          prefaceAnn = ()
           preface = mempty
           sections = [
-            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section () 2 (Ann "## 2\n" [text "2"])
+            mkSect 1 (Ann "# 1\n\n" [text "1"]) mempty [
+              mkSect 2 (Ann "## 2\n" [text "2"])
                 (Ann "test\n" [Node (Just (PosInfo 4 1 4 4)) PARAGRAPH
-                               [text "test"]])) [],
-              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+                               [text "test"]]) [],
+              mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
       nodesToDocument (commonmarkToAnnotatedNodes [] src)
         `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
+          prefaceAnn = ()
           preface = commonmarkToAnnotatedNodes [] "blah\n"
           sections = [
-            Tree.Node (Section () 1 (Ann "# 1\n\n" [text "1"]) mempty) [
-              Tree.Node (Section () 2 (Ann "## 2\n\n" [text "2"]) mempty) [],
-              Tree.Node (Section () 2 (Ann "## 3\n" [text "3"]) mempty) [] ] ]
+            mkSect 1 (Ann "# 1\n\n" [text "1"]) mempty [
+              mkSect 2 (Ann "## 2\n\n" [text "2"]) mempty [],
+              mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
       nodesToDocument (commonmarkToAnnotatedNodes [] src)
         `shouldBe` Document{..}
 

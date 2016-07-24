@@ -112,23 +112,25 @@ instance Monoid a => Monoid (Annotated a) where
 {- |
 A section in the Markdown tree. Does not contain subsections (the tree is built using 'Tree.Forest' from "Data.Tree").
 -}
-data Section a = Section {
-  sectionAnn :: a,
+data Section a b = Section {
   -- | Level (from 1 to 6).
-  level   :: Int,
-  heading :: Annotated [Node],
+  level      :: Int,
+  heading    :: Annotated [Node],
+  headingAnn :: a,
   -- | Text between the heading and the first subsection. Can be empty.
-  content :: Annotated [Node] }
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  content    :: Annotated [Node],
+  contentAnn :: b }
+  deriving (Eq, Show)
 
 {- |
-The whole parsed Markdown tree.
+The whole parsed Markdown tree. The first parameter is the type of annotations for headings (i.e. sections), the second – chunks of text (which are all associated with sections except for the preface).
 -}
-data Document a = Document {
+data Document a b = Document {
   -- | Text before the first section. Can be empty.
-  preface  :: Annotated [Node],
-  sections :: Tree.Forest (Section a) }
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  preface    :: Annotated [Node],
+  prefaceAnn :: b,
+  sections   :: Tree.Forest (Section a b) }
+  deriving (Eq, Show)
 
 {- |
 'commonmarkToAnnotatedNodes' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
@@ -198,7 +200,7 @@ cutFrom a = T.unlines . drop (start a - 1) . T.lines
 {- |
 Turn a list of Markdown nodes into a tree.
 -}
-nodesToDocument :: Annotated [Node] -> Document ()
+nodesToDocument :: Annotated [Node] -> Document () ()
 nodesToDocument (Ann src nodes) = do
   -- Break at headings
   let prefaceNodes :: [Node]
@@ -229,32 +231,36 @@ nodesToDocument (Ann src nodes) = do
                 Ann afterBlocksSrc afterBlocks)
   -- A function for turning blocks into a tree
   let makeTree [] = []
-      makeTree (((level, heading), rest) : xs) =
+      makeTree (((level, heading), content) : xs) =
         let (nested, others) = span (\x -> x^._1._1 > level) xs
-        in  Tree.Node (Section () level heading rest) (makeTree nested) :
-            makeTree others
+            section = Section {
+              headingAnn = (),
+              contentAnn = (),
+              .. }
+        in  Tree.Node section (makeTree nested) : makeTree others
   -- Return the result
   Document {
-    preface = prefaceAnnotated,
-    sections = makeTree blocks }
+    preface    = prefaceAnnotated,
+    prefaceAnn = (),
+    sections   = makeTree blocks }
 
 {- $monoid-note
 
 Note that you can use ('<>') to combine 'Annotated' nodes together.
 -}
 
-flattenDocument :: Document a -> Annotated [Node]
+flattenDocument :: Document a b -> Annotated [Node]
 flattenDocument Document{..} = preface <> flattenForest sections
 
-flattenSection :: Section a -> Annotated [Node]
+flattenSection :: Section a b -> Annotated [Node]
 flattenSection Section{..} =
   Ann (annSource heading <> annSource content)
       (headingNode : annValue content)
   where
     headingNode = Node Nothing (HEADING level) (annValue heading)
 
-flattenTree :: Tree.Tree (Section a) -> Annotated [Node]
+flattenTree :: Tree.Tree (Section a b) -> Annotated [Node]
 flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 
-flattenForest :: Tree.Forest (Section a) -> Annotated [Node]
+flattenForest :: Tree.Forest (Section a b) -> Annotated [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
