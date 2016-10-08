@@ -44,7 +44,7 @@ test-suite tests
                      , cmark
                      , cmark-sections
                      , containers
-                     , hspec == 2.2.*
+                     , hspec >= 2.2 && < 2.4
                      , text
   ghc-options:         -Wall -fno-warn-unused-do-bind
   hs-source-dirs:      tests
