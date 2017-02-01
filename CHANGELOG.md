@@ -1,3 +1,7 @@
+# 0.1.0.3
+
+* Bumped hspec and cmark versions.
+
 # 0.1.0.2
 
 * Bumped cmark version.
