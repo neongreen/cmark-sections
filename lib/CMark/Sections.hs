@@ -1,5 +1,4 @@
 {-# LANGUAGE
-TemplateHaskell,
 RecordWildCards,
 DeriveFunctor,
 DeriveFoldable,
