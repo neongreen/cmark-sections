@@ -34,14 +34,14 @@ main = hspec $ do
           prefaceAnn = ()
           preface = mempty
           sections = []
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "spaces" $ do
       let src = "  \n\n  \n"
           prefaceAnn = ()
           preface = Ann "  \n\n  \n" []
           sections = []
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "paragraph" $ do
       let src = "x"
@@ -49,7 +49,7 @@ main = hspec $ do
           preface = Ann "x" [
             Node (Just (PosInfo 1 1 1 1)) PARAGRAPH [text "x"] ]
           sections = []
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "3 paragraphs" $ do
       let src = T.unlines ["","x","","","y","","z",""]
@@ -59,7 +59,7 @@ main = hspec $ do
             Node (Just (PosInfo 5 1 5 1)) PARAGRAPH [text "y"],
             Node (Just (PosInfo 7 1 7 1)) PARAGRAPH [text "z"] ]
           sections = []
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "headers" $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
@@ -69,7 +69,7 @@ main = hspec $ do
             mkSect 1 (Ann "# 1\n\n" [text "1"]) mempty [
               mkSect 2 (Ann "## 2\n\n" [text "2"]) mempty [],
               mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
@@ -81,17 +81,17 @@ main = hspec $ do
                 (Ann "test\n" [Node (Just (PosInfo 4 1 4 4)) PARAGRAPH
                                [text "test"]]) [],
               mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
           prefaceAnn = ()
-          preface = commonmarkToAnnotatedNodes [] "blah\n"
+          preface = commonmarkToNodesWithSource [] "blah\n"
           sections = [
             mkSect 1 (Ann "# 1\n\n" [text "1"]) mempty [
               mkSect 2 (Ann "## 2\n\n" [text "2"]) mempty [],
               mkSect 2 (Ann "## 3\n" [text "3"]) mempty [] ] ]
-      nodesToDocument (commonmarkToAnnotatedNodes [] src)
+      nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
 
   describe "reconstruction:" $ do
@@ -110,7 +110,7 @@ main = hspec $ do
     modifyMaxSize (*20) $ modifyMaxSuccess (*10) $
       prop "QuickCheck" $
         forAllShrink mdGen shrinkMD $ \(T.concat -> src) ->
-          let md1 = commonmarkToAnnotatedNodes [] src
+          let md1 = commonmarkToNodesWithSource [] src
               md2 = flattenDocument . nodesToDocument $ md1
               err = printf "%s: %s /= %s" (show src) (show md1) (show md2)
           in  counterexample err (compareMD md1 md2)
@@ -120,8 +120,8 @@ text t = Node Nothing (TEXT t) []
 
 fromToDoc :: Text -> Expectation
 fromToDoc src =
-  flattenDocument (nodesToDocument (commonmarkToAnnotatedNodes [] src))
-    `shouldBeMD` commonmarkToAnnotatedNodes [] src
+  flattenDocument (nodesToDocument (commonmarkToNodesWithSource [] src))
+    `shouldBeMD` commonmarkToNodesWithSource [] src
 
 shouldBeMD :: Annotated [Node] -> Annotated [Node] -> Expectation
 shouldBeMD x y = x `shouldSatisfy` (compareMD y)

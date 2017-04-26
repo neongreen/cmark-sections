@@ -61,16 +61,16 @@ source of every node of the tree.
 In most cases the only thing you need to do is something like this:
 
 @
-'nodesToDocument' . 'commonmarkToAnnotatedNodes' ['optSafe', 'optNormalize']
+'nodesToDocument' . 'commonmarkToNodesWithSource' ['optSafe', 'optNormalize']
 @
 
-You can preprocess parsed Markdown after doing 'commonmarkToAnnotatedNodes'
+You can preprocess parsed Markdown after doing 'commonmarkToNodesWithSource'
 as long as you don't add or remove any top-level nodes.
 -}
 module CMark.Sections
 (
   -- * Parse Markdown to trees
-  commonmarkToAnnotatedNodes,
+  commonmarkToNodesWithSource,
   nodesToDocument,
   WithSource(..),
   Section(..),
@@ -137,11 +137,11 @@ data Document a b = Document {
   sections   :: Tree.Forest (Section a b) }
   deriving (Eq, Show)
 
-{- | 'commonmarkToAnnotatedNodes' parses Markdown with the given options and
+{- | 'commonmarkToNodesWithSource' parses Markdown with the given options and
 extracts nodes from the initial 'DOCUMENT' node.
 -}
-commonmarkToAnnotatedNodes :: [CMarkOption] -> Text -> WithSource [Node]
-commonmarkToAnnotatedNodes opts src = WithSource src ns
+commonmarkToNodesWithSource :: [CMarkOption] -> Text -> WithSource [Node]
+commonmarkToNodesWithSource opts src = WithSource src ns
   where
     Node _ DOCUMENT ns = commonmarkToNode opts src
 

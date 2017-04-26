@@ -1,6 +1,7 @@
 # 0.2
 
-* Renamed `Annotated` to `WithSource`.
+* Renamed `Annotated` to `WithSource` and `commonmarkToAnnotatedNodes` to
+  `commonmarkToNodesWithSource`.
 
 # 0.1.0.3
 
