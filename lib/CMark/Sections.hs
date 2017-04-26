@@ -9,8 +9,9 @@ NoImplicitPrelude
   #-}
 
 
-{- |
-This library lets you parse Markdown into a hierarchical structure (delimited by headings). For instance, let's say your document looks like this:
+{- | This library lets you parse Markdown into a hierarchical structure
+(delimited by headings). For instance, let's say your document looks like
+this:
 
 @
 This is the preface.
@@ -54,7 +55,8 @@ It can be represented as a tree:
             'sections': []
 @
 
-That's what this library does. Moreover, it lets you access the Markdown source of every node of the tree.
+That's what this library does. Moreover, it lets you access the Markdown
+source of every node of the tree.
 
 In most cases the only thing you need to do is something like this:
 
@@ -62,7 +64,8 @@ In most cases the only thing you need to do is something like this:
 'nodesToDocument' . 'commonmarkToAnnotatedNodes' ['optSafe', 'optNormalize']
 @
 
-You can preprocess parsed Markdown after doing 'commonmarkToAnnotatedNodes' as long as you don't add or remove any top-level nodes.
+You can preprocess parsed Markdown after doing 'commonmarkToAnnotatedNodes'
+as long as you don't add or remove any top-level nodes.
 -}
 module CMark.Sections
 (
@@ -97,8 +100,8 @@ import qualified Data.Tree as Tree
 import Data.List.Split
 
 
-{- |
-A data type for annotating things with their source. In this library we only use @Annotated [Node]@, which stands for “some Markdown nodes + source”.
+{- | A data type for annotating things with their source. In this library we
+only use @Annotated [Node]@, which stands for “some Markdown nodes + source”.
 -}
 data Annotated a = Ann {
   annSource :: Text,
@@ -109,8 +112,8 @@ instance Monoid a => Monoid (Annotated a) where
   mempty = Ann "" mempty
   Ann s1 v1 `mappend` Ann s2 v2 = Ann (s1 <> s2) (v1 <> v2)
 
-{- |
-A section in the Markdown tree. Does not contain subsections (the tree is built using 'Tree.Forest' from "Data.Tree").
+{- | A section in the Markdown tree. Does not contain subsections (the tree is
+built using 'Tree.Forest' from "Data.Tree").
 -}
 data Section a b = Section {
   -- | Level (from 1 to 6).
@@ -122,8 +125,9 @@ data Section a b = Section {
   contentAnn :: b }
   deriving (Eq, Show)
 
-{- |
-The whole parsed Markdown tree. The first parameter is the type of annotations for headings (i.e. sections), the second – chunks of text (which are all associated with sections except for the preface).
+{- | The whole parsed Markdown tree. The first parameter is the type of
+annotations for headings (i.e. sections), the second – chunks of text (which
+are all associated with sections except for the preface).
 -}
 data Document a b = Document {
   -- | Text before the first section. Can be empty.
@@ -132,8 +136,8 @@ data Document a b = Document {
   sections   :: Tree.Forest (Section a b) }
   deriving (Eq, Show)
 
-{- |
-'commonmarkToAnnotatedNodes' parses Markdown with the given options and extracts nodes from the initial 'DOCUMENT' node.
+{- | 'commonmarkToAnnotatedNodes' parses Markdown with the given options and
+extracts nodes from the initial 'DOCUMENT' node.
 -}
 commonmarkToAnnotatedNodes :: [CMarkOption] -> Text -> Annotated [Node]
 commonmarkToAnnotatedNodes opts s = Ann s ns
@@ -197,8 +201,7 @@ cutFrom
   -> Text
 cutFrom a = T.unlines . drop (start a - 1) . T.lines
 
-{- |
-Turn a list of Markdown nodes into a tree.
+{- | Turn a list of Markdown nodes into a tree.
 -}
 nodesToDocument :: Annotated [Node] -> Document () ()
 nodesToDocument (Ann src nodes) = do
