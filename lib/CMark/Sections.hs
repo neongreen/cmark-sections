@@ -73,6 +73,8 @@ module CMark.Sections
   commonmarkToNodesWithSource,
   nodesToDocument,
   WithSource(..),
+    getSource,
+    stripSource,
   Section(..),
   Document(..),
 
@@ -103,38 +105,47 @@ import Data.List.Split
 {- | A data type for annotating things with their source. In this library we
 only use @WithSource [Node]@, which stands for “some Markdown nodes + source”.
 -}
-data WithSource a = WithSource {
-  annSource :: Text,
-  annValue  :: a }
+data WithSource a = WithSource Text a
   deriving (Eq, Show, Functor, Foldable, Traversable)
+
+-- | Extract source from 'WithSource' (it's stored there in a field).
+getSource :: WithSource a -> Text
+getSource (WithSource src _) = src
+
+-- | Extract data from 'WithSource'.
+stripSource :: WithSource a -> a
+stripSource (WithSource _ x) = x
 
 instance Monoid a => Monoid (WithSource a) where
   mempty = WithSource "" mempty
   WithSource s1 v1 `mappend` WithSource s2 v2 =
     WithSource (s1 <> s2) (v1 <> v2)
 
-{- | A section in the Markdown tree. Does not contain subsections (the tree is
-built using 'Tree.Forest' from "Data.Tree").
+{- | A section in the Markdown tree.
+
+Sections do not contain subsections; i.e. `Section` isn't recursive and the
+tree structure is provided by "Data.Tree".
+
+In a @Section a b@, the heading is coupled with a value of type @a@, and
+content – with a value of type @b@. This is occasionally useful.
 -}
 data Section a b = Section {
   -- | Level (from 1 to 6).
-  level      :: Int,
-  heading    :: WithSource [Node],
-  headingAnn :: a,
+  level   :: Int,
+  -- | Heading
+  heading :: (a, WithSource [Node]),
   -- | Text between the heading and the first subsection. Can be empty.
-  content    :: WithSource [Node],
-  contentAnn :: b }
+  content :: (b, WithSource [Node])
+  }
   deriving (Eq, Show)
 
-{- | The whole parsed Markdown tree. The first parameter is the type of
-annotations for headings (i.e. sections), the second – chunks of text (which
-are all associated with sections except for the preface).
+{- | The whole parsed Markdown tree. In a @Document a b@, headings are
+annotated with @a@ and content blocks – with @b@.
 -}
 data Document a b = Document {
   -- | Text before the first section. Can be empty.
-  preface    :: WithSource [Node],
-  prefaceAnn :: b,
-  sections   :: Tree.Forest (Section a b) }
+  preface  :: (b, WithSource [Node]),
+  sections :: Tree.Forest (Section a b) }
   deriving (Eq, Show)
 
 {- | 'commonmarkToNodesWithSource' parses Markdown with the given options and
@@ -238,15 +249,16 @@ nodesToDocument (WithSource src nodes) = do
       makeTree (((level, heading), content) : xs) =
         let (nested, others) = span (\x -> x^._1._1 > level) xs
             section = Section {
-              headingAnn = (),
-              contentAnn = (),
-              .. }
+              level   = level,
+              heading = ((), heading),
+              content = ((), content)
+              }
         in  Tree.Node section (makeTree nested) : makeTree others
   -- Return the result
   Document {
-    preface    = prefaceAnnotated,
-    prefaceAnn = (),
-    sections   = makeTree blocks }
+    preface  = ((), prefaceAnnotated),
+    sections = makeTree blocks
+    }
 
 {- $monoid-note
 
@@ -261,15 +273,15 @@ I don't know.
 
 -- | Turn the whole parsed-and-broken-down 'Document' into a list of nodes.
 flattenDocument :: Document a b -> WithSource [Node]
-flattenDocument Document{..} = preface <> flattenForest sections
+flattenDocument Document{..} = snd preface <> flattenForest sections
 
 -- | Turn a section into a list of nodes.
 flattenSection :: Section a b -> WithSource [Node]
 flattenSection Section{..} =
-  WithSource (annSource heading <> annSource content)
-             (headingNode : annValue content)
+  WithSource (getSource (snd heading) <> getSource (snd content))
+             (headingNode : stripSource (snd content))
   where
-    headingNode = Node Nothing (HEADING level) (annValue heading)
+    headingNode = Node Nothing (HEADING level) (stripSource (snd heading))
 
 -- | Turn a "Data.Tree" 'Tree.Tree' into a list of nodes.
 flattenTree :: Tree.Tree (Section a b) -> WithSource [Node]

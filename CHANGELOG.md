@@ -1,7 +1,13 @@
 # 0.2
 
-* Renamed `Annotated` to `WithSource` and `commonmarkToAnnotatedNodes` to
-  `commonmarkToNodesWithSource`.
+* Renamed `Annotated` to `WithSource`.
+
+* Renamed `commonmarkToAnnotatedNodes` to `commonmarkToNodesWithSource`.
+
+* Renamed `annSource` and `annValue` to `getSource` and `stripSource`.
+
+* Joined `preface`, `header`, `content` with their annotations (using a
+  tuple).
 
 # 0.1.0.3
 

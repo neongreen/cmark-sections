@@ -27,44 +27,41 @@ import CMark.Sections
 main :: IO ()
 main = hspec $ do
   let mkSect level heading content ns =
-        Tree.Node Section{headingAnn = (),contentAnn = (),..} ns
+        Tree.Node
+          (Section level ((), heading) ((), content))
+          ns
   describe "converting:" $ do
     it "empty document" $ do
       let src = ""
-          prefaceAnn = ()
-          preface = mempty
+          preface = ((), mempty)
           sections = []
       nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "spaces" $ do
       let src = "  \n\n  \n"
-          prefaceAnn = ()
-          preface = WithSource "  \n\n  \n" []
+          preface = ((), WithSource "  \n\n  \n" [])
           sections = []
       nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "paragraph" $ do
       let src = "x"
-          prefaceAnn = ()
-          preface = WithSource "x" [
-            Node (Just (PosInfo 1 1 1 1)) PARAGRAPH [text "x"] ]
+          preface = ((), WithSource "x" [
+            Node (Just (PosInfo 1 1 1 1)) PARAGRAPH [text "x"] ])
           sections = []
       nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "3 paragraphs" $ do
       let src = T.unlines ["","x","","","y","","z",""]
-          prefaceAnn = ()
-          preface = WithSource "\nx\n\n\ny\n\nz\n\n" [
+          preface = ((), WithSource "\nx\n\n\ny\n\nz\n\n" [
             Node (Just (PosInfo 2 1 2 1)) PARAGRAPH [text "x"],
             Node (Just (PosInfo 5 1 5 1)) PARAGRAPH [text "y"],
-            Node (Just (PosInfo 7 1 7 1)) PARAGRAPH [text "z"] ]
+            Node (Just (PosInfo 7 1 7 1)) PARAGRAPH [text "z"] ])
           sections = []
       nodesToDocument (commonmarkToNodesWithSource [] src)
         `shouldBe` Document{..}
     it "headers" $ do
       let src = T.unlines ["# 1", "", "## 2", "", "## 3"]
-          prefaceAnn = ()
-          preface = mempty
+          preface = ((), mempty)
           sections = [
             mkSect 1 (WithSource "# 1\n\n" [text "1"]) mempty [
               mkSect 2 (WithSource "## 2\n\n" [text "2"]) mempty [],
@@ -73,8 +70,7 @@ main = hspec $ do
         `shouldBe` Document{..}
     it "headers+content" $ do
       let src = T.unlines ["# 1", "", "## 2", "test", "## 3"]
-          prefaceAnn = ()
-          preface = mempty
+          preface = ((), mempty)
           sections = [
             mkSect 1 (WithSource "# 1\n\n" [text "1"]) mempty [
               mkSect 2 (WithSource "## 2\n" [text "2"])
@@ -85,8 +81,7 @@ main = hspec $ do
         `shouldBe` Document{..}
     it "preface+headers" $ do
       let src = T.unlines ["blah", "# 1", "", "## 2", "", "## 3"]
-          prefaceAnn = ()
-          preface = commonmarkToNodesWithSource [] "blah\n"
+          preface = ((), commonmarkToNodesWithSource [] "blah\n")
           sections = [
             mkSect 1 (WithSource "# 1\n\n" [text "1"]) mempty [
               mkSect 2 (WithSource "## 2\n\n" [text "2"]) mempty [],
@@ -130,16 +125,16 @@ shouldBeMD x y = x `shouldSatisfy` (compareMD y)
 -- and position info).
 compareMD :: WithSource [Node] -> WithSource [Node] -> Bool
 compareMD x y =
-  map (\(Node _ a b) -> Node Nothing a b) (annValue x) ==
-  map (\(Node _ a b) -> Node Nothing a b) (annValue y)
+  map (\(Node _ a b) -> Node Nothing a b) (stripSource x) ==
+  map (\(Node _ a b) -> Node Nothing a b) (stripSource y)
   &&
-  or [annSource x == annSource y,
-      and [not (T.isSuffixOf "\n" (annSource x)),
-           T.isSuffixOf "\n" (annSource y),
-           annSource x == T.init (annSource y)],
-      and [not (T.isSuffixOf "\n" (annSource y)),
-           T.isSuffixOf "\n" (annSource x),
-           annSource y == T.init (annSource x)] ]
+  or [getSource x == getSource y,
+      and [not (T.isSuffixOf "\n" (getSource x)),
+           T.isSuffixOf "\n" (getSource y),
+           getSource x == T.init (getSource y)],
+      and [not (T.isSuffixOf "\n" (getSource y)),
+           T.isSuffixOf "\n" (getSource x),
+           getSource y == T.init (getSource x)] ]
 
 -- | Try to shrink Markdown.
 shrinkMD :: [Text] -> [[Text]]
