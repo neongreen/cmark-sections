@@ -1,3 +1,7 @@
+# 0.2
+
+* Renamed `Annotated` to `WithSource`.
+
 # 0.1.0.3
 
 * Bumped hspec and cmark versions.
@@ -10,6 +14,6 @@
 
 * Bumped hspec version.
 
-# 0.1.0.0
+# 0.1
 
 First release.

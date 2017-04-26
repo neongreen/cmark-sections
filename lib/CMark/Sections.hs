@@ -72,7 +72,7 @@ module CMark.Sections
   -- * Parse Markdown to trees
   commonmarkToAnnotatedNodes,
   nodesToDocument,
-  Annotated(..),
+  WithSource(..),
   Section(..),
   Document(..),
 
@@ -101,16 +101,17 @@ import Data.List.Split
 
 
 {- | A data type for annotating things with their source. In this library we
-only use @Annotated [Node]@, which stands for “some Markdown nodes + source”.
+only use @WithSource [Node]@, which stands for “some Markdown nodes + source”.
 -}
-data Annotated a = Ann {
+data WithSource a = WithSource {
   annSource :: Text,
   annValue  :: a }
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
-instance Monoid a => Monoid (Annotated a) where
-  mempty = Ann "" mempty
-  Ann s1 v1 `mappend` Ann s2 v2 = Ann (s1 <> s2) (v1 <> v2)
+instance Monoid a => Monoid (WithSource a) where
+  mempty = WithSource "" mempty
+  WithSource s1 v1 `mappend` WithSource s2 v2 =
+    WithSource (s1 <> s2) (v1 <> v2)
 
 {- | A section in the Markdown tree. Does not contain subsections (the tree is
 built using 'Tree.Forest' from "Data.Tree").
@@ -118,10 +119,10 @@ built using 'Tree.Forest' from "Data.Tree").
 data Section a b = Section {
   -- | Level (from 1 to 6).
   level      :: Int,
-  heading    :: Annotated [Node],
+  heading    :: WithSource [Node],
   headingAnn :: a,
   -- | Text between the heading and the first subsection. Can be empty.
-  content    :: Annotated [Node],
+  content    :: WithSource [Node],
   contentAnn :: b }
   deriving (Eq, Show)
 
@@ -131,7 +132,7 @@ are all associated with sections except for the preface).
 -}
 data Document a b = Document {
   -- | Text before the first section. Can be empty.
-  preface    :: Annotated [Node],
+  preface    :: WithSource [Node],
   prefaceAnn :: b,
   sections   :: Tree.Forest (Section a b) }
   deriving (Eq, Show)
@@ -139,10 +140,10 @@ data Document a b = Document {
 {- | 'commonmarkToAnnotatedNodes' parses Markdown with the given options and
 extracts nodes from the initial 'DOCUMENT' node.
 -}
-commonmarkToAnnotatedNodes :: [CMarkOption] -> Text -> Annotated [Node]
-commonmarkToAnnotatedNodes opts s = Ann s ns
+commonmarkToAnnotatedNodes :: [CMarkOption] -> Text -> WithSource [Node]
+commonmarkToAnnotatedNodes opts src = WithSource src ns
   where
-    Node _ DOCUMENT ns = commonmarkToNode opts s
+    Node _ DOCUMENT ns = commonmarkToNode opts src
 
 {- | Break Markdown into pieces:
 
@@ -203,21 +204,21 @@ cutFrom a = T.unlines . drop (start a - 1) . T.lines
 
 {- | Turn a list of Markdown nodes into a tree.
 -}
-nodesToDocument :: Annotated [Node] -> Document () ()
-nodesToDocument (Ann src nodes) = do
+nodesToDocument :: WithSource [Node] -> Document () ()
+nodesToDocument (WithSource src nodes) = do
   -- Break at headings
   let prefaceNodes :: [Node]
       restNodes :: [(Node, [Node])]
       (prefaceNodes, restNodes) = breakAtHeadings nodes
   -- Annotate the first block with the source. If there are no headings at
   -- all, we just copy everything; otherwise we cut until the first heading.
-  let prefaceAnnotated :: Annotated [Node]
+  let prefaceAnnotated :: WithSource [Node]
       prefaceAnnotated = case restNodes of
-        []    -> Ann src prefaceNodes
-        (x:_) -> Ann (cutTo (fst x) src) prefaceNodes
+        []    -> WithSource src prefaceNodes
+        (x:_) -> WithSource (cutTo (fst x) src) prefaceNodes
   -- Annotate other blocks with their sources by cutting until the position
   -- of the next block
-  let blocks :: [((Int, Annotated [Node]), Annotated [Node])]
+  let blocks :: [((Int, WithSource [Node]), WithSource [Node])]
       blocks = do
         ((heading, afterBlocks), mbNext) <-
             zip restNodes (tail (map Just restNodes ++ [Nothing]))
@@ -230,8 +231,8 @@ nodesToDocument (Ann src nodes) = do
               ([], _)            -> ""
               (x:_, Just (y, _)) -> cut x y src
               (x:_, Nothing)     -> cutFrom x src
-        return ((hLevel, Ann hSrc hNodes),
-                Ann afterBlocksSrc afterBlocks)
+        return ((hLevel, WithSource hSrc hNodes),
+                WithSource afterBlocksSrc afterBlocks)
   -- A function for turning blocks into a tree
   let makeTree [] = []
       makeTree (((level, heading), content) : xs) =
@@ -249,7 +250,7 @@ nodesToDocument (Ann src nodes) = do
 
 {- $monoid-note
 
-Note that you can use ('<>') to combine 'Annotated' nodes together. It will
+Note that you can use ('<>') to combine 'WithSource' nodes together. It will
 concatenate sources and parsed Markdown.
 
 I'm not sure how valid this operation is for Markdown, but probably
@@ -258,18 +259,18 @@ the end and duplicate links). Maybe cmark doesn't even allow duplicate links,
 I don't know.
 -}
 
-flattenDocument :: Document a b -> Annotated [Node]
+flattenDocument :: Document a b -> WithSource [Node]
 flattenDocument Document{..} = preface <> flattenForest sections
 
-flattenSection :: Section a b -> Annotated [Node]
+flattenSection :: Section a b -> WithSource [Node]
 flattenSection Section{..} =
-  Ann (annSource heading <> annSource content)
-      (headingNode : annValue content)
+  WithSource (annSource heading <> annSource content)
+             (headingNode : annValue content)
   where
     headingNode = Node Nothing (HEADING level) (annValue heading)
 
-flattenTree :: Tree.Tree (Section a b) -> Annotated [Node]
+flattenTree :: Tree.Tree (Section a b) -> WithSource [Node]
 flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 
-flattenForest :: Tree.Forest (Section a b) -> Annotated [Node]
+flattenForest :: Tree.Forest (Section a b) -> WithSource [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
