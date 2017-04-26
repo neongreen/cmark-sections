@@ -186,19 +186,19 @@ start (Node Nothing  _ _) =
 cut
   :: Node      -- ^ First node to include
   -> Node      -- ^ First node to exclude
-  -> Text
+  -> Text      -- ^ Source that was parsed
   -> Text
 cut a b = T.unlines . take (start b - start a) . drop (start a - 1) . T.lines
 
 cutTo
-  :: Node
-  -> Text
+  :: Node      -- ^ First node to exclude
+  -> Text      -- ^ Source that was parsed
   -> Text
 cutTo b = T.unlines . take (start b - 1) . T.lines
 
 cutFrom
-  :: Node
-  -> Text
+  :: Node      -- ^ First node to include
+  -> Text      -- ^ Source that was parsed
   -> Text
 cutFrom a = T.unlines . drop (start a - 1) . T.lines
 
@@ -259,9 +259,11 @@ the end and duplicate links). Maybe cmark doesn't even allow duplicate links,
 I don't know.
 -}
 
+-- | Turn the whole parsed-and-broken-down 'Document' into a list of nodes.
 flattenDocument :: Document a b -> WithSource [Node]
 flattenDocument Document{..} = preface <> flattenForest sections
 
+-- | Turn a section into a list of nodes.
 flattenSection :: Section a b -> WithSource [Node]
 flattenSection Section{..} =
   WithSource (annSource heading <> annSource content)
@@ -269,8 +271,10 @@ flattenSection Section{..} =
   where
     headingNode = Node Nothing (HEADING level) (annValue heading)
 
+-- | Turn a "Data.Tree" 'Tree.Tree' into a list of nodes.
 flattenTree :: Tree.Tree (Section a b) -> WithSource [Node]
 flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 
+-- | Turn a "Data.Tree" 'Tree.Forest' into a list of nodes.
 flattenForest :: Tree.Forest (Section a b) -> WithSource [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
