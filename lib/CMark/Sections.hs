@@ -38,6 +38,7 @@ It can be represented as a tree:
 
 @
 'preface': "This is the preface."
+
 'sections':
     * 'heading': __"First chapter"__
       'content': "This chapter doesn't have sections."
@@ -147,21 +148,21 @@ commonmarkToAnnotatedNodes opts src = WithSource src ns
 {- | Break Markdown into pieces:
 
 @
-    blah blah blah               }
-                                 }----> init
-    blah blah blah               }
+    blah blah blah               }---- preface
+                                 }----
+    blah blah blah               }----
 
-    # foo                        }
+    # foo                        }---- heading
                                  }
-    blah blah                    }----> (heading, blocks after)
+    blah blah                    }---- blocks after
+                                 }----
+    blah blah                    }----
+
+    ## bar                       }---- heading
                                  }
-    blah blah                    }
-
-    ## bar                       }
-                                 }----> (heading, blocks after)
-    blah blah                    }
-
-    ...
+    blah blah                    }---- blocks after
+                                 }----
+    ...                          }----
 @
 -}
 breakAtHeadings
