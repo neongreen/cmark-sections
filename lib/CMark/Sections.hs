@@ -249,7 +249,13 @@ nodesToDocument (Ann src nodes) = do
 
 {- $monoid-note
 
-Note that you can use ('<>') to combine 'Annotated' nodes together.
+Note that you can use ('<>') to combine 'Annotated' nodes together. It will
+concatenate sources and parsed Markdown.
+
+I'm not sure how valid this operation is for Markdown, but probably
+more-or-less valid (when you exclude corner cases like missing newlines at
+the end and duplicate links). Maybe cmark doesn't even allow duplicate links,
+I don't know.
 -}
 
 flattenDocument :: Document a b -> Annotated [Node]
