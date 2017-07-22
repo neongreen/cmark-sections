@@ -1,9 +1,7 @@
-{-# LANGUAGE
-OverloadedStrings,
-RecordWildCards,
-ViewPatterns,
-NoImplicitPrelude
-  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 
 module Main where

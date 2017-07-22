@@ -1,11 +1,9 @@
-{-# LANGUAGE
-RecordWildCards,
-DeriveFunctor,
-DeriveFoldable,
-DeriveTraversable,
-OverloadedStrings,
-NoImplicitPrelude
-  #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 
 {- | This library lets you parse Markdown into a hierarchical structure
