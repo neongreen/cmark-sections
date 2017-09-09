@@ -1,5 +1,5 @@
 name:                cmark-sections
-version:             0.2.0.0
+version:             0.3.0
 synopsis:            Represent cmark-parsed Markdown as a tree of sections
 description:
   Represent cmark-parsed Markdown as a tree of sections

@@ -1,4 +1,8 @@
-# 0.2
+# 0.3.0
+
+* Added `Generic` and `Data` instances.
+
+# 0.2.0.0
 
 * Renamed `Annotated` to `WithSource`.
 

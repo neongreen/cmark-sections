@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
@@ -104,7 +106,7 @@ import Data.List.Split
 only use @WithSource [Node]@, which stands for “some Markdown nodes + source”.
 -}
 data WithSource a = WithSource Text a
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Show, Functor, Foldable, Traversable, Generic, Data)
 
 -- | Extract source from 'WithSource' (it's stored there in a field).
 getSource :: WithSource a -> Text
@@ -135,7 +137,7 @@ data Section a b = Section {
   -- | Text between the heading and the first subsection. Can be empty.
   content :: (b, WithSource [Node])
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Data)
 
 {- | The whole parsed Markdown tree. In a @Document a b@, headings are
 annotated with @a@ and content blocks – with @b@.
@@ -144,7 +146,7 @@ data Document a b = Document {
   -- | Text before the first section. Can be empty.
   preface  :: (b, WithSource [Node]),
   sections :: Tree.Forest (Section a b) }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Data)
 
 {- | 'commonmarkToNodesWithSource' parses Markdown with the given options and
 extracts nodes from the initial 'DOCUMENT' node.
