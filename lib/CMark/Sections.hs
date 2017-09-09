@@ -131,11 +131,15 @@ content – with a value of type @b@. This is occasionally useful.
 -}
 data Section a b = Section {
   -- | Level (from 1 to 6).
-  level   :: Int,
+  level      :: Int,
   -- | Heading
-  heading :: (a, WithSource [Node]),
+  heading    :: WithSource [Node],
+  -- | Annotation for the heading
+  headingAnn :: a,
   -- | Text between the heading and the first subsection. Can be empty.
-  content :: (b, WithSource [Node])
+  content    :: WithSource [Node],
+  -- | Annotation for the content
+  contentAnn :: b
   }
   deriving (Eq, Show, Generic, Data)
 
@@ -144,8 +148,11 @@ annotated with @a@ and content blocks – with @b@.
 -}
 data Document a b = Document {
   -- | Text before the first section. Can be empty.
-  preface  :: (b, WithSource [Node]),
-  sections :: Tree.Forest (Section a b) }
+  preface    :: WithSource [Node],
+  -- | Annotation for the preface
+  prefaceAnn :: b,
+  -- | A tree with the sections comprising the rest of the document
+  sections   :: Tree.Forest (Section a b) }
   deriving (Eq, Show, Generic, Data)
 
 {- | 'commonmarkToNodesWithSource' parses Markdown with the given options and
@@ -249,15 +256,18 @@ nodesToDocument (WithSource src nodes) = do
       makeTree (((level, heading), content) : xs) =
         let (nested, others) = span (\x -> x^._1._1 > level) xs
             section = Section {
-              level   = level,
-              heading = ((), heading),
-              content = ((), content)
+              level      = level,
+              heading    = heading,
+              headingAnn = (),
+              content    = content,
+              contentAnn = ()
               }
         in  Tree.Node section (makeTree nested) : makeTree others
   -- Return the result
   Document {
-    preface  = ((), prefaceAnnotated),
-    sections = makeTree blocks
+    preface    = prefaceAnnotated,
+    prefaceAnn = (),
+    sections   = makeTree blocks
     }
 
 {- $monoid-note
@@ -273,15 +283,15 @@ I don't know.
 
 -- | Turn the whole parsed-and-broken-down 'Document' into a list of nodes.
 flattenDocument :: Document a b -> WithSource [Node]
-flattenDocument Document{..} = snd preface <> flattenForest sections
+flattenDocument Document{..} = preface <> flattenForest sections
 
 -- | Turn a section into a list of nodes.
 flattenSection :: Section a b -> WithSource [Node]
 flattenSection Section{..} =
-  WithSource (getSource (snd heading) <> getSource (snd content))
-             (headingNode : stripSource (snd content))
+  WithSource (getSource heading <> getSource content)
+             (headingNode : stripSource content)
   where
-    headingNode = Node Nothing (HEADING level) (stripSource (snd heading))
+    headingNode = Node Nothing (HEADING level) (stripSource heading)
 
 -- | Turn a "Data.Tree" 'Tree.Tree' into a list of nodes.
 flattenTree :: Tree.Tree (Section a b) -> WithSource [Node]

@@ -2,6 +2,8 @@
 
 * Added `Generic` and `Data` instances.
 
+* Split back `preface`, `header`, `content` from their annotations.
+
 # 0.2.0.0
 
 * Renamed `Annotated` to `WithSource`.
