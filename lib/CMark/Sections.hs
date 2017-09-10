@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
@@ -7,6 +8,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
+#if __GLASGOW_HASKELL__ == 708
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
 
 {- | This library lets you parse Markdown into a hierarchical structure
 (delimited by headings). For instance, let's say your document looks like
@@ -300,3 +304,13 @@ flattenTree (Tree.Node r f) = flattenSection r <> flattenForest f
 -- | Turn a "Data.Tree" 'Tree.Forest' into a list of nodes.
 flattenForest :: Tree.Forest (Section a b) -> WithSource [Node]
 flattenForest = mconcat . map flattenSection . concatMap Tree.flatten
+
+----------------------------------------------------------------------------
+-- Instances for GHC 7.8
+----------------------------------------------------------------------------
+
+#if __GLASGOW_HASKELL__ == 708
+deriving instance Typeable WithSource
+deriving instance Typeable Section
+deriving instance Typeable Document
+#endif
