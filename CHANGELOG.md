@@ -1,3 +1,7 @@
+# 0.3.0.1
+
+* Bumped hspec and cmark versions.
+
 # 0.3.0
 
 * Added `Generic` and `Data` instances.

@@ -1,8 +1,8 @@
 name:                cmark-sections
-version:             0.3.0
+version:             0.3.0.1
 synopsis:            Represent cmark-parsed Markdown as a tree of sections
 description:
-  Represent cmark-parsed Markdown as a tree of sections
+  Convert a stream of cmark-parsed Markdown to a tree (with nodes marked by sections).
 homepage:            http://github.com/aelve/cmark-sections
 bug-reports:         http://github.com/aelve/cmark-sections/issues
 license:             BSD3
@@ -11,7 +11,7 @@ author:              Artyom
 maintainer:          yom@artyom.me
 -- copyright:           
 category:            Text
-tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1
+tested-with:         GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 cabal-version:       >=1.10
@@ -26,7 +26,7 @@ library
   -- other-extensions:    
   build-depends:       base >=4.7 && <5
                      , base-prelude == 1.*
-                     , cmark >= 0.5 && < 0.5.6
+                     , cmark >= 0.5 && < 0.5.7
                      , containers
                      , microlens == 0.4.*
                      , split == 0.2.*
@@ -44,7 +44,7 @@ test-suite tests
                      , cmark
                      , cmark-sections
                      , containers
-                     , hspec >= 2.2 && < 2.5
+                     , hspec >= 2.2 && < 2.6
                      , text
   ghc-options:         -Wall -fno-warn-unused-do-bind
   hs-source-dirs:      tests
