@@ -8,10 +8,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-#if __GLASGOW_HASKELL__ == 708
-{-# LANGUAGE StandaloneDeriving #-}
-#endif
-
 {- | This library lets you parse Markdown into a hierarchical structure
 (delimited by headings). For instance, let's say your document looks like
 this:
@@ -92,7 +88,12 @@ module CMark.Sections
 where
 
 
+#if !(MIN_VERSION_base(4,11,0))
+import BasePrelude hiding ((<>))
+import Data.Semigroup
+#else
 import BasePrelude
+#endif
 -- Lenses
 import Lens.Micro hiding ((&))
 -- Text
@@ -120,10 +121,13 @@ getSource (WithSource src _) = src
 stripSource :: WithSource a -> a
 stripSource (WithSource _ x) = x
 
-instance Monoid a => Monoid (WithSource a) where
-  mempty = WithSource "" mempty
-  WithSource s1 v1 `mappend` WithSource s2 v2 =
+instance Semigroup a => Semigroup (WithSource a) where
+  WithSource s1 v1 <> WithSource s2 v2 =
     WithSource (s1 <> s2) (v1 <> v2)
+
+instance (Monoid a, Semigroup a) => Monoid (WithSource a) where
+  mempty = WithSource "" mempty
+  mappend = (<>)
 
 {- | A section in the Markdown tree.
 
